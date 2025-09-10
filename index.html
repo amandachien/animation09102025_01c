@@ -23,7 +23,7 @@
             --md-surface-container-highest: #dee1e6;
             --md-on-surface: #1c1b1f;
             --md-on-surface-variant: #49454f;
-            --md-outline: #79747e;
+            --md-outline: none;
             --md-outline-variant: #cac4d0;
             --md-shadow: rgba(0, 0, 0, 0.15);
             --md-scrim: rgba(0, 0, 0, 0.6);
@@ -32,7 +32,7 @@
             --md-dark-surface: #121212;
             --md-dark-surface-variant: #1e1e1e;
             --md-dark-on-surface: #e6e1e5;
-            --md-dark-outline: #938f99;
+            --md-dark-outline: none;
         }
 
         body {
@@ -707,19 +707,19 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button onclick="app.ai.handleQuickCommand('create_wave')" class="quick-cmd">
                     <span class="material-icons-round" style="font-size: 16px;">add_circle</span>
-                    Create Wave
+                    Create
                 </button>
                 <button onclick="app.ai.handleQuickCommand('spawn_test')" class="quick-cmd">
                     <span class="material-icons-round" style="font-size: 16px;">play_arrow</span>
-                    Test Collision
+                    Test
                 </button>
                 <button onclick="app.ai.handleQuickCommand('clear_waves')" class="quick-cmd">
                     <span class="material-icons-round" style="font-size: 16px;">clear_all</span>
-                    Clear All
+                    Clear
                 </button>
                 <button onclick="app.ai.handleQuickCommand('show_physics')" class="quick-cmd">
                     <span class="material-icons-round" style="font-size: 16px;">analytics</span>
-                    Physics Stats
+                    Stats
                 </button>
                 <button onclick="app.ai.handleQuickCommand('explain_physics')" class="quick-cmd">
                     <span class="material-icons-round" style="font-size: 16px;">help</span>
@@ -727,7 +727,7 @@
                 </button>
                 <button onclick="app.ai.handleQuickCommand('capabilities')" class="quick-cmd">
                     <span class="material-icons-round" style="font-size: 16px;">info</span>
-                    What Can You Do?
+                    What You Do
                 </button>
             </div>
         </div>
@@ -765,23 +765,23 @@
     <div id="controls" style="display: none;">
         <button onclick="app.toggleDetectionView()" style="display: inline-flex; align-items: center; gap: 8px;">
             <span class="material-icons-round" style="font-size: 16px;">visibility</span>
-            Toggle Detection
+            Detection
         </button>
         <button onclick="app.clearAllWaves()" style="display: inline-flex; align-items: center; gap: 8px;">
             <span class="material-icons-round" style="font-size: 16px;">clear_all</span>
-            Clear Waves
+            Clear
         </button>
         <button onclick="app.toggleHandLandmarks()" style="display: inline-flex; align-items: center; gap: 8px;">
             <span class="material-icons-round" style="font-size: 16px;">pan_tool</span>
-            Toggle Landmarks
+            Landmarks
         </button>
         <button onclick="app.togglePhysicsStats()" style="display: inline-flex; align-items: center; gap: 8px;">
             <span class="material-icons-round" style="font-size: 16px;">analytics</span>
-            Physics Stats
+            Stats
         </button>
         <button onclick="app.spawnTestWaves()" style="display: inline-flex; align-items: center; gap: 8px;">
             <span class="material-icons-round" style="font-size: 16px;">play_arrow</span>
-            Spawn Test
+            Test
         </button>
         <button onclick="app.ai.toggleInterface()" class="ai-button" style="display: inline-flex; align-items: center; gap: 8px;">
             <span class="material-icons-round" style="font-size: 16px;">smart_toy</span>
