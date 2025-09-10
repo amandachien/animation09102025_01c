@@ -1,0 +1,39 @@
+{
+  "name": "webar-physics-ai",
+  "version": "1.0.0",
+  "description": "WebAR Physics Simulation with AI Voice Assistant",
+  "main": "index.html",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "netlify dev",
+    "serve": "npx serve dist",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "webAR",
+    "physics",
+    "AI",
+    "voice-assistant",
+    "mediapipe",
+    "huggingface"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/webar-physics-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/webar-physics-ai/issues"
+  },
+  "homepage": "https://github.com/yourusername/webar-physics-ai#readme"
+}

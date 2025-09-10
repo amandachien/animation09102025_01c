@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>WebAR Wave Physics + AI Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <link href="https://fonts.googleapis.com/css?family=Space+Mono:400,700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Space Mono', monospace;
+            background: #000;
+            color: white;
+            touch-action: none;
+        }
+        
+        #camera-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        #detection-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+        
+        #ar-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 3;
+            pointer-events: none;
+        }
+        
+        #instructions {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 100;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        #status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            text-align: center;
+            font-size: 12px;
+        }
+        
+        #debug {
+            position: fixed;
+            top: 120px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            font-size: 9px;
+            font-family: 'Space Mono', monospace;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        
+        #controls {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            text-align: center;
+        }
+        
+        button {
+            background: #ffffff;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin: 2px;
+            font-family: 'Space Mono', monospace;
+        }
+        
+        button:disabled {
+            background: #666;
+            opacity: 0.5;
+        }
+        
+        .ai-button {
+            background: #00ff88;
+            font-weight: bold;
+        }
+        
+        .ai-button.active {
+            background: #ff4444;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* AI Interface - Fixed Mobile Scrolling */
+        #ai-interface {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            border: 2px solid #00ff88;
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 300px;
+            max-width: 90vw;
+            max-height: 85vh;
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            font-family: 'Space Mono', monospace;
+            
+            /* Critical for mobile performance */
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        #ai-interface.visible {
+            display: flex;
+        }
+
+        /* FIXED: Single comprehensive conversation container rule */
+        #ai-conversation {
+            /* Container sizing */
+            height: 200px;
+            min-height: 150px;
+            max-height: 250px;
+            
+            /* Scrolling - iOS Safari optimized */
+            overflow-y: scroll;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            
+            /* Layout */
+            margin-bottom: 15px;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            flex-shrink: 0;
+            
+            /* Performance optimizations */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: scroll-position;
+            
+            /* Scrollbar styling for desktop */
+            scrollbar-width: thin;
+            scrollbar-color: #00ff88 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Desktop webkit scrollbar */
+        #ai-conversation::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #ai-conversation::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        #ai-conversation::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 4px;
+            min-height: 20px;
+        }
+
+        #ai-conversation::-webkit-scrollbar-thumb:hover {
+            background: #00cc66;
+        }
+
+        /* Mobile-specific fixes */
+        @media (max-width: 768px) {
+            #ai-conversation {
+                /* Force proper scrolling on mobile */
+                -webkit-overflow-scrolling: touch !important;
+                overflow-y: scroll !important;
+                
+                /* Mobile Safari specific */
+                -webkit-transform: translate3d(0, 0, 0);
+                transform: translate3d(0, 0, 0);
+                
+                /* Hide desktop scrollbar on mobile */
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            #ai-conversation::-webkit-scrollbar {
+                display: none;
+                width: 0px;
+                background: transparent;
+            }
+            
+            /* Smaller interface on mobile */
+            #ai-interface {
+                max-width: 95vw;
+                max-height: 90vh;
+                padding: 15px;
+            }
+            
+            #ai-conversation {
+                height: 160px;
+                max-height: 180px;
+                padding: 8px;
+            }
+        }
+
+        /* iOS Safari specific targeting */
+        @supports (-webkit-touch-callout: none) {
+            #ai-conversation {
+                -webkit-overflow-scrolling: touch;
+                overflow-y: scroll;
+                position: relative;
+            }
+        }
+
+        /* Message styling */
+        .message {
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.4;
+            min-height: 20px;
+        }
+
+        .message.user {
+            background: rgba(0, 255, 136, 0.2);
+            border-left: 3px solid #00ff88;
+        }
+
+        .message.ai {
+            background: rgba(255, 100, 255, 0.2);
+            border-left: 3px solid #ff64ff;
+        }
+
+        .message .timestamp {
+            font-size: 10px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        /* Quick commands grid */
+        #quick-commands {
+            margin: 15px 0;
+            flex-shrink: 0;
+        }
+
+        .quick-cmd {
+            background: #4a90e2 !important;
+            color: white !important;
+            padding: 8px 6px !important;
+            font-size: 11px !important;
+            border: none !important;
+            border-radius: 4px !important;
+            cursor: pointer;
+            transition: background 0.2s;
+            min-height: 32px;
+            touch-action: manipulation;
+        }
+
+        .quick-cmd:hover:not(:active) {
+            background: #357abd !important;
+        }
+
+        .quick-cmd:active {
+            background: #2968a3 !important;
+            transform: scale(0.98);
+        }
+
+        /* Text input area */
+        #text-input-area {
+            margin: 15px 0;
+            flex-shrink: 0;
+        }
+
+        #ai-text-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 12px;
+            box-sizing: border-box;
+            touch-action: manipulation;
+            font-family: 'Space Mono', monospace;
+        }
+
+        /* AI controls */
+        .ai-controls {
+            text-align: center;
+            margin-top: 15px;
+            flex-shrink: 0;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        
+        #voice-status {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        #voice-status.listening {
+            color: #00ff88;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        
+        #voice-status.processing {
+            color: #ffaa00;
+        }
+        
+        #voice-status.speaking {
+            color: #ff64ff;
+        }
+        
+        .wave-3d {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at 30% 20%, 
+                rgba(255,255,255,0.9) 0%, 
+                rgba(255,100,255,0.8) 15%, 
+                rgba(200,50,255,0.7) 35%, 
+                rgba(150,0,255,0.6) 60%, 
+                rgba(100,0,200,0.4) 80%, 
+                rgba(50,0,150,0.2) 100%);
+            box-shadow: 
+                0 0 40px rgba(255,100,255,0.8),
+                0 0 80px rgba(200,50,255,0.6),
+                inset 0 0 30px rgba(255,255,255,0.3),
+                inset 10px -10px 20px rgba(255,150,255,0.4),
+                inset -10px 10px 20px rgba(150,100,255,0.3);
+            animation: liquidFlow3D 4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 4;
+            filter: blur(0.5px) contrast(1.2) brightness(1.1);
+            backdrop-filter: blur(2px);
+            transition: transform 0.1s ease-out;
+        }
+        
+        .wave-3d.solid {
+            animation: solidLiquidPulse 6s ease-in-out infinite;
+            background: radial-gradient(ellipse at 25% 25%, 
+                rgba(255,255,255,1) 0%, 
+                rgba(255,120,255,0.95) 10%, 
+                rgba(220,80,255,0.9) 25%, 
+                rgba(180,40,255,0.8) 45%, 
+                rgba(140,20,255,0.7) 65%, 
+                rgba(100,0,200,0.6) 85%, 
+                rgba(60,0,120,0.4) 100%);
+            box-shadow: 
+                0 0 50px rgba(255,120,255,0.9),
+                0 0 100px rgba(220,80,255,0.7),
+                0 0 150px rgba(180,40,255,0.5),
+                inset 0 0 40px rgba(255,255,255,0.4),
+                inset 15px -15px 30px rgba(255,180,255,0.5),
+                inset -15px 15px 30px rgba(180,120,255,0.4),
+                inset 0 -20px 25px rgba(120,60,200,0.3);
+            filter: blur(0.3px) contrast(1.3) brightness(1.2);
+        }
+        
+        .wave-3d.bouncing {
+            animation: bouncingWave 0.3s ease-out;
+            filter: blur(0.2px) contrast(1.4) brightness(1.3) saturate(1.5);
+            box-shadow: 
+                0 0 60px rgba(255,120,255,1),
+                0 0 120px rgba(220,80,255,0.8),
+                0 0 180px rgba(180,40,255,0.6),
+                inset 0 0 50px rgba(255,255,255,0.6);
+        }
+        
+        .wave-3d.colliding {
+            animation: collisionRipple 0.6s ease-out;
+            filter: blur(0.1px) contrast(1.5) brightness(1.4) saturate(1.8);
+            box-shadow: 
+                0 0 80px rgba(255,255,0,1),
+                0 0 160px rgba(255,120,255,0.9),
+                0 0 240px rgba(220,80,255,0.7),
+                inset 0 0 60px rgba(255,255,255,0.8);
+        }
+        
+        .collision-spark {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,0,0.8) 50%, transparent 100%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            animation: sparkFly 0.8s ease-out forwards;
+        }
+        
+        @keyframes liquidFlow3D {
+            0% { 
+                transform: scale(1) rotate(0deg) skew(0deg, 0deg); 
+                border-radius: 50% 40% 60% 30%; 
+                opacity: 0.8;
+            }
+            15% { 
+                transform: scale(1.2) rotate(45deg) skew(2deg, -1deg); 
+                border-radius: 40% 60% 30% 70%; 
+                opacity: 0.9;
+            }
+            30% { 
+                transform: scale(1.4) rotate(90deg) skew(-1deg, 3deg); 
+                border-radius: 60% 30% 70% 40%; 
+                opacity: 1;
+            }
+            45% { 
+                transform: scale(1.1) rotate(135deg) skew(1.5deg, -2deg); 
+                border-radius: 30% 70% 40% 60%; 
+                opacity: 0.95;
+            }
+            60% { 
+                transform: scale(1.3) rotate(180deg) skew(-2deg, 1deg); 
+                border-radius: 70% 40% 50% 30%; 
+                opacity: 1;
+            }
+            75% { 
+                transform: scale(1.5) rotate(225deg) skew(1deg, -1.5deg); 
+                border-radius: 40% 50% 70% 30%; 
+                opacity: 0.9;
+            }
+            90% { 
+                transform: scale(1.1) rotate(315deg) skew(-1deg, 2deg); 
+                border-radius: 50% 30% 40% 70%; 
+                opacity: 0.85;
+            }
+            100% { 
+                transform: scale(1) rotate(360deg) skew(0deg, 0deg); 
+                border-radius: 50% 40% 60% 30%; 
+                opacity: 0.8;
+            }
+        }
+        
+        @keyframes solidLiquidPulse {
+            0%, 100% { 
+                transform: scale(1) rotate(0deg) skew(0deg, 0deg); 
+                border-radius: 45% 55% 40% 60%;
+                opacity: 0.9; 
+            }
+            25% { 
+                transform: scale(1.08) rotate(90deg) skew(1deg, -1deg); 
+                border-radius: 55% 35% 65% 45%;
+                opacity: 1; 
+            }
+            50% { 
+                transform: scale(1.05) rotate(180deg) skew(-0.5deg, 1.5deg); 
+                border-radius: 35% 65% 45% 55%;
+                opacity: 0.95; 
+            }
+            75% { 
+                transform: scale(1.12) rotate(270deg) skew(1.5deg, -0.5deg); 
+                border-radius: 65% 45% 35% 55%;
+                opacity: 1; 
+            }
+        }
+        
+        @keyframes bouncingWave {
+            0% {
+                transform: scale(1) translateY(0px);
+            }
+            30% {
+                transform: scale(1.15) translateY(-20px);
+                border-radius: 35% 65% 45% 55%;
+            }
+            60% {
+                transform: scale(0.9) translateY(10px);
+                border-radius: 65% 35% 55% 45%;
+            }
+            100% {
+                transform: scale(1) translateY(0px);
+                border-radius: 45% 55% 40% 60%;
+            }
+        }
+        
+        @keyframes collisionRipple {
+            0% {
+                transform: scale(1) rotate(0deg);
+                border-radius: 50% 40% 60% 30%;
+                opacity: 1;
+            }
+            20% {
+                transform: scale(1.3) rotate(72deg);
+                border-radius: 30% 70% 20% 80%;
+                opacity: 1;
+            }
+            40% {
+                transform: scale(0.8) rotate(144deg);
+                border-radius: 80% 20% 70% 30%;
+                opacity: 0.9;
+            }
+            60% {
+                transform: scale(1.2) rotate(216deg);
+                border-radius: 40% 60% 50% 50%;
+                opacity: 0.8;
+            }
+            80% {
+                transform: scale(0.9) rotate(288deg);
+                border-radius: 60% 40% 30% 70%;
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1) rotate(360deg);
+                border-radius: 50% 40% 60% 30%;
+                opacity: 0.9;
+            }
+        }
+        
+        @keyframes sparkFly {
+            0% {
+                transform: scale(1) translate(0, 0);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5) translate(var(--spark-x), var(--spark-y));
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0.2) translate(calc(var(--spark-x) * 2), calc(var(--spark-y) * 2));
+                opacity: 0;
+            }
+        }
+        
+        .hand-landmark {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(0, 255, 0, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .fingertip {
+            background: rgba(255, 165, 0, 0.8);
+            width: 12px;
+            height: 12px;
+            border: 2px solid #ffa500;
+        }
+        
+        .dribble-fingertip {
+            background: rgba(0, 255, 255, 0.9);
+            width: 14px;
+            height: 14px;
+            border: 2px solid #00ffff;
+            animation: dribblePulse 0.5s ease-in-out infinite;
+        }
+        
+        .pinch-indicator {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 0, 0.8);
+            border-radius: 50%;
+            border: 3px solid #ffff00;
+            pointer-events: none;
+            z-index: 6;
+            animation: pinchPulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes pinchPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        @keyframes dribblePulse {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.3); opacity: 1; }
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 200;
+            text-align: center;
+        }
+
+        #physics-stats {
+            position: fixed;
+            top: 220px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 50, 100, 0.8);
+            color: #00ffff;
+            padding: 8px;
+            border-radius: 5px;
+            z-index: 100;
+            font-size: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera-view" autoplay playsinline muted></video>
+    <canvas id="detection-canvas"></canvas>
+    <canvas id="ar-canvas"></canvas>
+    
+    <div id="loading">
+        <div>Loading WebAR AI Assistant...</div>
+        <div style="margin-top: 10px; font-size: 12px;">Initializing voice recognition and AI</div>
+    </div>
+    
+    <div id="instructions" style="display: none;">
+        <strong>🌊 WebAR Wave Physics + AI Assistant</strong><br>
+        Pinch & dribble with fingers<br>
+        Watch waves collide & bounce
+    </div>
+    
+    <div id="status">Initializing AI assistant...</div>
+    
+    <div id="debug">Debug info will appear here...</div>
+
+    <div id="physics-stats" style="display: none;">
+        <div>🔬 Physics Engine Status</div>
+        <div id="collision-count">Collisions: 0</div>
+        <div id="wave-count">Active Waves: 0</div>
+        <div id="velocity-info">Physics Tick Rate: 60fps</div>
+    </div>
+    
+    <!-- AI Interface -->
+    <div id="ai-interface">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <h3 style="color: #00ff88; margin: 0;">🤖 AI Physics Assistant</h3>
+        </div>
+        
+        <div id="ai-conversation"></div>
+        
+        <div id="quick-commands" style="margin: 15px 0;">
+            <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Quick Commands:</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button onclick="app.ai.handleQuickCommand('create_wave')" class="quick-cmd">
+                    Create Wave
+                </button>
+                <button onclick="app.ai.handleQuickCommand('spawn_test')" class="quick-cmd">
+                    Test Collision
+                </button>
+                <button onclick="app.ai.handleQuickCommand('clear_waves')" class="quick-cmd">
+                    Clear All
+                </button>
+                <button onclick="app.ai.handleQuickCommand('show_physics')" class="quick-cmd">
+                    Physics Stats
+                </button>
+                <button onclick="app.ai.handleQuickCommand('explain_physics')" class="quick-cmd">
+                    How It Works
+                </button>
+                <button onclick="app.ai.handleQuickCommand('capabilities')" class="quick-cmd">
+                    What Can You Do?
+                </button>
+            </div>
+        </div>
+        
+        <div id="text-input-area" style="margin: 15px 0;">
+            <input type="text" id="ai-text-input" placeholder="Ask me about physics or type a command..." 
+                   onkeypress="if(event.key==='Enter') app.ai.handleTextInput()">
+            <button onclick="app.ai.handleTextInput()" style="margin-top: 8px; width: 100%; padding: 10px; 
+                    background: #00ff88; color: #000; border: none; border-radius: 5px; font-weight: bold;">
+                Send Message
+            </button>
+        </div>
+        
+        <div class="ai-controls">
+            <button onclick="app.ai.clearConversation()" style="background: #ff6666;">Clear Chat</button>
+            <button onclick="app.ai.toggleInterface()" style="background: #666;">Close</button>
+        </div>
+        
+        <div style="margin-top: 10px; font-size: 11px; color: #888; text-align: center;">
+            Try asking: "How do collisions work?" or "Create 3 waves"
+        </div>
+    </div>
+    
+    <div id="controls" style="display: none;">
+        <button onclick="app.toggleDetectionView()">Toggle Detection</button>
+        <button onclick="app.clearAllWaves()">Clear Waves</button>
+        <button onclick="app.toggleHandLandmarks()">Toggle Landmarks</button>
+        <button onclick="app.togglePhysicsStats()">Physics Stats</button>
+        <button onclick="app.spawnTestWaves()">Spawn Test</button>
+        <button onclick="app.ai.toggleInterface()" class="ai-button">🤖 AI Assistant</button>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+    
+    <script src="https://unpkg.com/@mediapipe/camera_utils@0.3.1675465747/camera_utils.js"></script>
+    <script src="https://unpkg.com/@mediapipe/control_utils@0.6.1629159505/control_utils.js"></script>
+    <script src="https://unpkg.com/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js"></script>
+    <script src="https://unpkg.com/@mediapipe/hands@0.4.1675469240/hands.js"></script>
+
+    <script>
+
+// Enhanced AI Assistant Class with Secure HuggingFace Integration
+class AIAssistant {
+    constructor(app) {
+        this.app = app;
+        this.conversation = [];
+        this.speechSynthesis = window.speechSynthesis;
+        this.interface = document.getElementById('ai-interface');
+        this.conversationDiv = document.getElementById('ai-conversation');
+        this.voiceStatus = document.getElementById('voice-status');
+        
+        // Secure HuggingFace configuration
+        this.hfApiUrl = 'https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium';
+        this.hfApiKey = null;
+        this.isDemo = false;
+        
+        this.init();
+    }
+    
+    async init() {
+        this.app.log('🤖 Initializing AI Assistant...');
+        
+        // Create enhanced UI
+        this.createEnhancedInterface();
+        
+        this.app.log('✅ AI Assistant ready!');
+    }
+    
+    
+    createEnhancedInterface() {
+        // Update the AI interface HTML
+        this.interface.innerHTML = `
+            <div style="text-align: center; margin-bottom: 15px;">
+                <h3 style="color: #00ff88; margin: 0;">🤖 AI Physics Assistant</h3>
+            </div>
+            
+            <div id="ai-conversation"></div>
+            
+            <div id="quick-commands" style="margin: 15px 0;">
+                <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Quick Commands:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button onclick="app.ai.handleQuickCommand('create_wave')" class="quick-cmd">
+                        Create Wave
+                    </button>
+                    <button onclick="app.ai.handleQuickCommand('spawn_test')" class="quick-cmd">
+                        Test Collision
+                    </button>
+                    <button onclick="app.ai.handleQuickCommand('clear_waves')" class="quick-cmd">
+                        Clear All
+                    </button>
+                    <button onclick="app.ai.handleQuickCommand('show_physics')" class="quick-cmd">
+                        Physics Stats
+                    </button>
+                    <button onclick="app.ai.handleQuickCommand('explain_physics')" class="quick-cmd">
+                        How It Works
+                    </button>
+                    <button onclick="app.ai.handleQuickCommand('capabilities')" class="quick-cmd">
+                        What Can You Do?
+                    </button>
+                </div>
+            </div>
+            
+            <div id="text-input-area" style="margin: 15px 0;">
+                <input type="text" id="ai-text-input" placeholder="Ask me about physics or type a command..." 
+                       style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #333; 
+                              background: rgba(0,0,0,0.7); color: white; font-size: 14px; box-sizing: border-box;"
+                       onkeypress="if(event.key==='Enter') app.ai.handleTextInput()">
+                <button onclick="app.ai.handleTextInput()" style="margin-top: 8px; width: 100%; padding: 10px; 
+                        background: #00ff88; color: #000; border: none; border-radius: 5px; font-weight: bold;">
+                    Send Message
+                </button>
+            </div>
+            
+            <div class="ai-controls">
+                <button onclick="app.ai.clearConversation()" style="background: #ff6666;">Clear Chat</button>
+                <button onclick="app.ai.toggleInterface()" style="background: #666;">Close</button>
+            </div>
+            
+            <div style="margin-top: 10px; font-size: 11px; color: #888; text-align: center;">
+                Try asking: "How do collisions work?" or "Create 3 waves"
+            </div>
+        `;
+        
+        // Update conversationDiv reference
+        this.conversationDiv = document.getElementById('ai-conversation');
+        
+        // Add CSS for quick command buttons and layout fixes
+        const style = document.createElement('style');
+        style.textContent = `
+            #ai-interface {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 20, 40, 0.95);
+                border: 2px solid #00ff88;
+                border-radius: 15px;
+                padding: 20px;
+                min-width: 300px;
+                max-width: 90vw;
+                max-height: 80vh;
+                z-index: 200;
+                display: none;
+                overflow: hidden;
+                flex-direction: column;
+            }
+            
+            #ai-interface.visible {
+                display: flex;
+            }
+            
+            #ai-conversation {
+                max-height: 120px;
+                overflow-y: auto;
+                margin-bottom: 15px;
+                border: 1px solid #333;
+                padding: 10px;
+                border-radius: 8px;
+                background: rgba(0, 0, 0, 0.5);
+                flex-shrink: 0;
+            }
+            
+            .ai-controls {
+                text-align: center;
+                margin-top: 15px;
+                flex-shrink: 0;
+                padding-top: 10px;
+                border-top: 1px solid #333;
+            }
+            
+            .quick-cmd {
+                background: #4a90e2 !important;
+                color: white !important;
+                padding: 8px 6px !important;
+                font-size: 11px !important;
+                border: none !important;
+                border-radius: 4px !important;
+                cursor: pointer;
+                transition: background 0.2s;
+                min-height: 30px;
+            }
+            .quick-cmd:hover {
+                background: #357abd !important;
+            }
+            .quick-cmd:active {
+                background: #2968a3 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    handleQuickCommand(command) {
+    const commandTexts = {
+        'create_wave': 'Create a wave',
+        'spawn_test': 'Spawn test waves',
+        'clear_waves': 'Clear all waves',
+        'show_physics': 'Show physics statistics',
+        'explain_physics': 'How does the physics engine work?',
+        'capabilities': 'What can you do?'
+    };
+    
+    const text = commandTexts[command] || command;
+    this.addMessage('user', text);
+    
+    // Handle these commands directly instead of going through AI processing
+    if (command === 'explain_physics') {
+        const response = 'The physics engine simulates realistic wave behavior with multiple forces: gravity pulls waves down, friction slows movement, and elastic collisions conserve momentum. Each wave has mass proportional to its size, velocity vectors, and responds to boundary bounces. The collision detection uses circle geometry and applies impulse forces based on conservation of momentum.';
+        this.addMessage('ai', response);
+        this.speak(response);
+        return;
+    }
+    
+    if (command === 'capabilities') {
+        const response = 'I can help you control the wave physics simulation! Use the quick command buttons above, or ask me about: creating waves, physics concepts, collision mechanics, or clearing the simulation. I can also explain how the realistic physics engine works with gravity, momentum, and elastic collisions.';
+        this.addMessage('ai', response);
+        this.speak(response);
+        return;
+    }
+    
+    // For other commands, check if they're direct commands first
+    const directCommand = this.parseDirectCommand(text.toLowerCase());
+    if (directCommand) {
+        this.executeCommand(directCommand);
+    } else {
+        // If not a direct command, process with AI
+        this.processCommand(text);
+    }
+}
+    
+    handleTextInput() {
+    const input = document.getElementById('ai-text-input');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    this.addMessage('user', text);
+    input.value = '';
+    
+    // First, check for direct command patterns
+    const directResponse = this.getDirectResponse(text.toLowerCase());
+    if (directResponse) {
+        this.addMessage('ai', directResponse);
+        this.speak(directResponse);
+        return;
+    }
+    
+    // Then check for executable commands
+    const command = this.parseDirectCommand(text.toLowerCase());
+    if (command) {
+        this.executeCommand(command);
+        return;
+    }
+    
+    // Finally, process with AI if no direct match
+    this.processCommand(text);
+}
+
+    getDirectResponse(text) {
+    // Handle "How do collisions work?" and variations
+    if ((text.includes('how') && text.includes('collision')) || 
+        (text.includes('collision') && text.includes('work'))) {
+        return 'Collisions use real-time detection with momentum conservation! When two waves collide, the system calculates impact forces based on their masses and velocities. You can see visual spark effects and hear the physics in action. Waves also bounce off screen edges with damping. Try "spawn test" to see multiple collisions!';
+    }
+    
+    // Handle "What can you do?" and variations
+    if ((text.includes('what') && (text.includes('can') || text.includes('do'))) || 
+        text.includes('capabilities')) {
+        return 'I can help you control the wave physics simulation! Use the quick command buttons above, or ask me about: creating waves, physics concepts, collision mechanics, or clearing the simulation. I can also explain how the realistic physics engine works with gravity, momentum, and elastic collisions.';
+    }
+    
+    // Handle "How does the physics engine work?" and variations
+    if ((text.includes('how') && text.includes('physics')) || 
+        (text.includes('physics') && text.includes('work'))) {
+        return 'The physics engine simulates realistic wave behavior with multiple forces: gravity pulls waves down, friction slows movement, and elastic collisions conserve momentum. Each wave has mass proportional to its size, velocity vectors, and responds to boundary bounces. The collision detection uses circle geometry and applies impulse forces based on conservation of momentum.';
+    }
+    
+    // Handle numbered wave creation (e.g., "Create 3 waves")
+    const createMatch = text.match(/create\s+(\d+)\s+waves?/);
+    if (createMatch) {
+        const num = parseInt(createMatch[1]);
+        if (num > 0 && num <= 10) {
+            for (let i = 0; i < num; i++) {
+                setTimeout(() => this.app.createWaveAtCenter(), i * 200);
+            }
+            return `Creating ${num} physics waves for you! Each wave has individual mass, velocity, and will interact with others through realistic collision physics.`;
+        }
+    }
+    
+    // Handle general creation commands
+    if (text.includes('create') && (text.includes('wave') || text.includes('waves'))) {
+        this.app.createWaveAtCenter();
+        return 'Created a new physics wave! It will bounce around with realistic gravity and momentum.';
+    }
+    
+    // Handle clear commands
+    if ((text.includes('clear') || text.includes('reset')) && 
+        (text.includes('wave') || text.includes('all'))) {
+        this.app.clearAllWaves();
+        return 'All waves cleared! The physics simulation has been reset. Try creating new waves.';
+    }
+    
+    // Handle test/demo commands
+    if ((text.includes('test') || text.includes('demo') || text.includes('spawn')) && 
+        (text.includes('wave') || text.includes('collision'))) {
+        this.app.spawnTestWaves();
+        return 'Spawned 5 test waves! Watch them collide and bounce off each other with realistic physics.';
+    }
+    
+    // Handle physics stats commands
+    if (text.includes('physics') && (text.includes('stats') || text.includes('statistics'))) {
+        this.app.togglePhysicsStats();
+        return 'Physics statistics panel toggled! You can now see collision counts and wave data.';
+    }
+    
+    return null; // No direct response found
+}
+    
+    async processCommand(text) {
+        this.app.log('🗣️ Processing: "' + text + '"');
+        
+        // Check for direct commands first
+        const command = this.parseDirectCommand(text.toLowerCase());
+        if (command) {
+            this.executeCommand(command);
+            return;
+        }
+        
+        // Process with AI
+        await this.getAIResponse(text);
+    }
+    
+    parseDirectCommand(text) {
+    const commandMap = {
+        'create wave': 'create_wave',
+        'create a wave': 'create_wave',
+        'make wave': 'create_wave',
+        'spawn wave': 'create_wave',
+        'new wave': 'create_wave',
+        'add wave': 'create_wave',
+        'clear waves': 'clear_waves',
+        'clear all waves': 'clear_waves',
+        'clear all': 'clear_waves',
+        'clear everything': 'clear_waves',
+        'remove waves': 'clear_waves',
+        'delete waves': 'clear_waves',
+        'spawn test waves': 'spawn_test',
+        'spawn test': 'spawn_test',
+        'test waves': 'spawn_test',
+        'collision test': 'spawn_test',
+        'demo waves': 'spawn_test',
+        'test collision': 'spawn_test',
+        'show physics statistics': 'show_physics',
+        'show physics': 'show_physics',
+        'physics stats': 'show_physics',
+        'toggle physics': 'show_physics',
+        'physics statistics': 'show_physics'
+    };
+    
+    // Check for exact matches first
+    for (const [phrase, command] of Object.entries(commandMap)) {
+        if (text === phrase || text.includes(phrase)) {
+            return command;
+        }
+    }
+    
+    return null;
+}
+    
+    executeCommand(command) {
+        this.app.log('⚡ Executing command: ' + command);
+        
+        let response = '';
+        
+        switch (command) {
+            case 'create_wave':
+                this.app.createWaveAtCenter();
+                response = 'Created a new physics wave! It will bounce around with realistic gravity and momentum.';
+                break;
+                
+            case 'clear_waves':
+                this.app.clearAllWaves();
+                response = 'All waves cleared! The physics simulation has been reset. Try creating new waves.';
+                break;
+                
+            case 'spawn_test':
+                this.app.spawnTestWaves();
+                response = 'Spawned 5 test waves! Watch them collide and bounce off each other with realistic physics.';
+                break;
+                
+            case 'show_physics':
+                this.app.togglePhysicsStats();
+                response = 'Physics statistics panel toggled! You can now see collision counts and wave data.';
+                break;
+                
+            default:
+                response = 'Command not recognized. Try "create wave", "clear waves", or "spawn test".';
+        }
+        
+        this.addMessage('ai', response);
+        this.speak(response);
+    }
+    
+
+async getAIResponse(userText) {
+    // Show thinking indicator
+    const thinkingMsg = this.addMessage('ai', 'Thinking...');
+
+    try {
+        // Send prompt and conversation history to Netlify function
+        const response = await fetch('/.netlify/functions/ai-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: userText,
+                conversation: {
+                    past_user_inputs: this.conversation.filter(m => m.type === 'user').map(m => m.text),
+                    generated_responses: this.conversation.filter(m => m.type === 'ai').map(m => m.text)
+                }
+            })
+        });
+        const data = await response.json();
+
+        thinkingMsg.remove();
+
+        if (data.generated_text) {
+            this.addMessage('ai', data.generated_text);
+            this.speak(data.generated_text);
+        } else if (data.error) {
+            this.addMessage('ai', 'AI error: ' + data.error);
+        } else {
+            this.addMessage('ai', 'No response from AI.');
+        }
+    } catch (error) {
+        thinkingMsg.remove();
+        this.addMessage('ai', 'Error contacting AI service.');
+    }
+}
+
+    
+    async queryHuggingFace(text) {
+        const requestBody = {
+            inputs: {
+                past_user_inputs: this.conversation
+                    .filter(msg => msg.type === 'user')
+                    .slice(-3)
+                    .map(msg => msg.text),
+                generated_responses: this.conversation
+                    .filter(msg => msg.type === 'ai')
+                    .slice(-3)
+                    .map(msg => msg.text),
+                text: text
+            },
+            parameters: {
+                max_length: 100,
+                temperature: 0.7,
+                do_sample: true,
+                top_p: 0.9,
+                repetition_penalty: 1.1
+            }
+        };
+        
+        const response = await fetch(this.hfApiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.hfApiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HuggingFace API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(`HuggingFace API error: ${data.error}`);
+        }
+        
+        return data.generated_text || this.getDemoResponse(text);
+    }
+    
+    getDemoResponse(text) {
+        const lowerText = text.toLowerCase();
+        
+        // Enhanced context-aware responses with more detail
+        if (lowerText.includes('what') && (lowerText.includes('do') || lowerText.includes('can'))) {
+            return 'I can help you control the wave physics simulation! Use the quick command buttons above, or ask me about: creating waves, physics concepts, collision mechanics, or clearing the simulation. I can also explain how the realistic physics engine works with gravity, momentum, and elastic collisions.';
+        }
+        
+        // Fix for "How It Works" button
+        if (lowerText.includes('how') && (lowerText.includes('work') || lowerText.includes('physics') || lowerText.includes('it works'))) {
+            return 'The physics engine simulates realistic wave behavior with multiple forces: gravity pulls waves down, friction slows movement, and elastic collisions conserve momentum. Each wave has mass proportional to its size, velocity vectors, and responds to boundary bounces. The collision detection uses circle geometry and applies impulse forces based on conservation of momentum.';
+        }
+        
+        // Fix for "What Can You Do" button
+        if (lowerText.includes('what can you do') || lowerText.includes('capabilities')) {
+            return 'I can help you control the wave physics simulation! Use the quick command buttons above, or ask me about: creating waves, physics concepts, collision mechanics, or clearing the simulation. I can also explain how the realistic physics engine works with gravity, momentum, and elastic collisions.';
+        }
+        
+        if (lowerText.includes('collision') || lowerText.includes('bounce')) {
+            return 'Collisions use real-time detection with momentum conservation! When two waves collide, the system calculates impact forces based on their masses and velocities. You can see visual spark effects and hear the physics in action. Waves also bounce off screen edges with damping. Try "spawn test" to see multiple collisions!';
+        }
+        
+        if (lowerText.includes('create') || lowerText.includes('make') || lowerText.includes('spawn')) {
+            const count = text.match(/\d+/);
+            if (count) {
+                const num = parseInt(count[0]);
+                if (num > 1 && num <= 10) {
+                    for (let i = 0; i < num; i++) {
+                        setTimeout(() => this.app.createWaveAtCenter(), i * 200);
+                    }
+                    return `Creating ${num} physics waves for you! Each wave has individual mass, velocity, and will interact with others through realistic collision physics.`;
+                }
+            }
+            return 'I can create physics waves! Each wave is a simulated object with realistic mass, gravity, and collision properties. Try tapping the screen, using the "Create Wave" button, or ask me to create multiple waves by saying something like "create 3 waves".';
+        }
+        
+        if (lowerText.includes('clear') || lowerText.includes('reset') || lowerText.includes('remove')) {
+            return 'I can clear all waves and reset the physics simulation. This removes all wave objects and collision data. Use the "Clear All" button or ask me to "clear waves" to start fresh.';
+        }
+        
+        if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
+            return 'Hello! I\'m your WebAR physics assistant. I can create liquid waves with realistic physics, explain collision mechanics, and control the simulation. Try the quick command buttons above or ask me about physics concepts!';
+        }
+        
+        if (lowerText.includes('help') || lowerText.includes('assist')) {
+            return 'I can help with the wave physics simulation! Try these quick commands: "Create Wave" for new objects, "Test Collision" for multiple bouncing waves, "Clear All" to reset, or "Physics Stats" to see collision data. You can also ask me questions about how the physics engine works!';
+        }
+        
+        if (lowerText.includes('hand') || lowerText.includes('pinch') || lowerText.includes('gesture')) {
+            return 'Hand tracking is designed for pinch gestures to create waves! If MediaPipe hand detection is working, you can pinch your thumb and index finger together in the camera view to create waves. Otherwise, you can tap the screen or use the interface buttons.';
+        }
+        
+        if (lowerText.includes('mobile') || lowerText.includes('phone') || lowerText.includes('touch')) {
+            return 'This WebAR app is optimized for mobile! You can tap anywhere on the screen to create waves, use the quick command buttons, or type questions in the text input. The physics simulation runs smoothly on modern phones with 60fps collision detection.';
+        }
+        
+        // Default responses with more variety
+        const defaultResponses = [
+            'Interesting question! The wave physics system uses realistic collision detection and momentum conservation. Try creating some waves to see it in action!',
+            'The physics engine is quite sophisticated! Each wave has mass, velocity, and responds to gravity and collisions. Would you like me to create some test waves?',
+            'You can interact with the simulation in several ways: quick command buttons, text input, or tapping the screen. What would you like to explore?',
+            'The collision system creates visual spark effects when waves bounce off each other or boundaries. Want to see a collision demonstration?',
+            'Each wave is a simulated physics object with realistic behavior. Try asking me to "create 3 waves" or "explain collisions" for more details!'
+        ];
+        
+        return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+    }
+    
+    speak(text) {
+        if (!this.speechSynthesis) return;
+        
+        // Cancel any ongoing speech
+        this.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 0.6;
+        
+        // Wait for voices to load
+        const setVoice = () => {
+            const voices = this.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice => 
+                voice.lang.startsWith('en') && 
+                (voice.name.includes('Female') || voice.name.includes('Samantha'))
+            ) || voices.find(voice => voice.lang.startsWith('en')) || voices[0];
+            
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+        };
+        
+        if (this.speechSynthesis.getVoices().length === 0) {
+            this.speechSynthesis.addEventListener('voiceschanged', setVoice, { once: true });
+        } else {
+            setVoice();
+        }
+        
+        utterance.onerror = (event) => {
+            this.app.log('🔊 Text-to-speech error: ' + event.error);
+        };
+        
+        this.speechSynthesis.speak(utterance);
+        this.app.log('🔊 Speaking: ' + text.substring(0, 50) + '...');
+    }
+    
+// Enhanced addMessage method with better mobile scroll handling
+// Replace your existing addMessage method with this enhanced version
+addMessage(type, text) {
+    const message = document.createElement('div');
+    message.className = `message ${type}`;
+    
+    const timestamp = document.createElement('div');
+    timestamp.className = 'timestamp';
+    timestamp.textContent = new Date().toLocaleTimeString();
+    
+    const content = document.createElement('div');
+    content.textContent = text;
+    
+    message.appendChild(timestamp);
+    message.appendChild(content);
+    
+    this.conversationDiv.appendChild(message);
+    
+    // Enhanced mobile-first scrolling approach
+    const forceScrollToBottom = () => {
+        const element = this.conversationDiv;
+        
+        // Method 1: Standard scroll
+        element.scrollTop = element.scrollHeight;
+        
+        // Method 2: ScrollTo with behavior
+        if (element.scrollTo) {
+            element.scrollTo({
+                top: element.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+        
+        // Method 3: Mobile Safari specific fixes
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        
+        if (isMobile || isIOSSafari) {
+            // Force webkit overflow scrolling
+            element.style.webkitOverflowScrolling = 'auto';
+            element.style.overflowY = 'scroll';
+            
+            // Force a reflow
+            element.offsetHeight;
+            
+            // Re-enable touch scrolling
+            setTimeout(() => {
+                element.style.webkitOverflowScrolling = 'touch';
+                element.scrollTop = element.scrollHeight;
+                
+                // Double-check scroll position
+                setTimeout(() => {
+                    element.scrollTop = element.scrollHeight;
+                }, 50);
+            }, 10);
+        }
+    };
+    
+    // Use multiple timing approaches to ensure scroll works
+    requestAnimationFrame(() => {
+        forceScrollToBottom();
+        
+        // Double-check after DOM updates
+        setTimeout(forceScrollToBottom, 100);
+        
+        // Triple-check for stubborn cases
+        setTimeout(forceScrollToBottom, 300);
+    });
+    
+    // Keep only last 10 messages for better performance
+    while (this.conversationDiv.children.length > 10) {
+        this.conversationDiv.removeChild(this.conversationDiv.firstChild);
+    }
+    
+    // Store in conversation history
+    this.conversation.push({ 
+        type, 
+        text, 
+        timestamp: Date.now() 
+    });
+    
+    // Keep conversation history manageable
+    if (this.conversation.length > 20) {
+        this.conversation = this.conversation.slice(-20);
+    }
+    
+    return message; // Return for potential removal (thinking indicator)
+}
+
+// Additional method to force scroll - call this if needed
+forceScrollToBottom() {
+    const element = this.conversationDiv;
+    
+    // Multiple scroll methods for maximum compatibility
+    element.scrollTop = element.scrollHeight;
+    element.scrollTo(0, element.scrollHeight);
+    
+    if (element.scrollTo) {
+        element.scrollTo({
+            top: element.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+    
+    // iOS-specific fix
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        element.style.webkitOverflowScrolling = 'auto';
+        setTimeout(() => {
+            element.style.webkitOverflowScrolling = 'touch';
+            element.scrollTop = element.scrollHeight;
+        }, 10);
+    }
+}
+    
+    toggleInterface() {
+        const isVisible = this.interface.classList.contains('visible');
+        
+        if (isVisible) {
+            // Hide interface
+            this.interface.classList.remove('visible');
+            this.interface.style.display = 'none';
+            
+            // Stop any speech
+            if (this.speechSynthesis) {
+                this.speechSynthesis.cancel();
+            }
+        } else {
+            // Show interface
+            this.interface.style.display = 'flex';
+            this.interface.classList.add('visible');
+            
+            // Interface is now visible
+            this.addMessage('ai', 'AI Assistant activated! Use the quick commands above or ask me about the physics simulation.');
+        }
+    }
+    
+    clearConversation() {
+        this.conversationDiv.innerHTML = '';
+        this.conversation = [];
+        this.addMessage('ai', 'Conversation cleared! How can I help you with the wave physics simulation?');
+    }
+}
+
+class PhysicsEngine {
+    constructor() {
+        this.gravity = 0.1;
+        this.friction = 0.98;
+        this.bounceDamping = 0.7;
+        this.collisionRadius = 0.8;
+        this.minVelocity = 0.1;
+        this.maxVelocity = 15;
+        this.enabled = true;
+        
+        this.totalCollisions = 0;
+        this.lastCollisionTime = 0;
+        
+        this.log('🔬 Physics Engine initialized');
+    }
+    
+    log(message) {
+        console.log(`[Physics] ${message}`);
+    }
+            
+            updateWave(wave) {
+                if (!this.enabled || !wave.physics) return;
+                
+                const physics = wave.physics;
+                
+                physics.velocityY += this.gravity;
+                
+                physics.velocityX *= this.friction;
+                physics.velocityY *= this.friction;
+                
+                if (Math.abs(physics.velocityX) < this.minVelocity) physics.velocityX = 0;
+                if (Math.abs(physics.velocityY) < this.minVelocity) physics.velocityY = 0;
+                
+                physics.velocityX = Math.max(-this.maxVelocity, Math.min(this.maxVelocity, physics.velocityX));
+                physics.velocityY = Math.max(-this.maxVelocity, Math.min(this.maxVelocity, physics.velocityY));
+                
+                physics.x += physics.velocityX;
+                physics.y += physics.velocityY;
+                
+                this.handleScreenBoundaries(wave);
+                this.applyPhysicsToElement(wave);
+            }
+            
+            handleScreenBoundaries(wave) {
+                const physics = wave.physics;
+                const radius = wave.size / 2;
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+                
+                if (physics.x - radius < 0) {
+                    physics.x = radius;
+                    physics.velocityX = -physics.velocityX * this.bounceDamping;
+                    this.createBoundaryEffect(physics.x, physics.y);
+                } else if (physics.x + radius > screenWidth) {
+                    physics.x = screenWidth - radius;
+                    physics.velocityX = -physics.velocityX * this.bounceDamping;
+                    this.createBoundaryEffect(physics.x, physics.y);
+                }
+                
+                if (physics.y - radius < 0) {
+                    physics.y = radius;
+                    physics.velocityY = -physics.velocityY * this.bounceDamping;
+                    this.createBoundaryEffect(physics.x, physics.y);
+                } else if (physics.y + radius > screenHeight) {
+                    physics.y = screenHeight - radius;
+                    physics.velocityY = -physics.velocityY * this.bounceDamping;
+                    this.createBoundaryEffect(physics.x, physics.y);
+                }
+            }
+            
+            createBoundaryEffect(x, y) {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        this.createSpark(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20, 0.5);
+                    }, i * 50);
+                }
+            }
+            
+            checkCollisions(waves) {
+                if (!this.enabled) return;
+                
+                for (let i = 0; i < waves.length; i++) {
+                    for (let j = i + 1; j < waves.length; j++) {
+                        const wave1 = waves[i];
+                        const wave2 = waves[j];
+                        
+                        if (!wave1.physics || !wave2.physics) continue;
+                        
+                        const collision = this.detectCollision(wave1, wave2);
+                        if (collision.colliding) {
+                            this.resolveCollision(wave1, wave2, collision);
+                        }
+                    }
+                }
+            }
+            
+            detectCollision(wave1, wave2) {
+                const dx = wave2.physics.x - wave1.physics.x;
+                const dy = wave2.physics.y - wave1.physics.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                const combinedRadius = ((wave1.size + wave2.size) / 2) * this.collisionRadius;
+                
+                return {
+                    colliding: distance < combinedRadius,
+                    distance: distance,
+                    dx: dx,
+                    dy: dy,
+                    normal: distance > 0 ? { x: dx / distance, y: dy / distance } : { x: 1, y: 0 }
+                };
+            }
+            
+            resolveCollision(wave1, wave2, collision) {
+                this.totalCollisions++;
+                this.lastCollisionTime = Date.now();
+                
+                const collisionX = wave1.physics.x + collision.dx * 0.5;
+                const collisionY = wave1.physics.y + collision.dy * 0.5;
+                
+                const overlap = ((wave1.size + wave2.size) / 2) * this.collisionRadius - collision.distance;
+                const separationX = collision.normal.x * overlap * 0.5;
+                const separationY = collision.normal.y * overlap * 0.5;
+                
+                wave1.physics.x -= separationX;
+                wave1.physics.y -= separationY;
+                wave2.physics.x += separationX;
+                wave2.physics.y += separationY;
+                
+                const relativeVelX = wave2.physics.velocityX - wave1.physics.velocityX;
+                const relativeVelY = wave2.physics.velocityY - wave1.physics.velocityY;
+                
+                const velocityAlongNormal = relativeVelX * collision.normal.x + relativeVelY * collision.normal.y;
+                
+                if (velocityAlongNormal > 0) return;
+                
+                const restitution = 0.8;
+                const impulseScalar = -(1 + restitution) * velocityAlongNormal;
+                const mass1 = wave1.size * wave1.size;
+                const mass2 = wave2.size * wave2.size;
+                const totalMass = mass1 + mass2;
+                
+                const impulseX = (impulseScalar * collision.normal.x) / totalMass;
+                const impulseY = (impulseScalar * collision.normal.y) / totalMass;
+                
+                wave1.physics.velocityX -= impulseX * mass2;
+                wave1.physics.velocityY -= impulseY * mass2;
+                wave2.physics.velocityX += impulseX * mass1;
+                wave2.physics.velocityY += impulseY * mass1;
+                
+                const randomFactor = 0.3;
+                wave1.physics.velocityX += (Math.random() - 0.5) * randomFactor;
+                wave1.physics.velocityY += (Math.random() - 0.5) * randomFactor;
+                wave2.physics.velocityX += (Math.random() - 0.5) * randomFactor;
+                wave2.physics.velocityY += (Math.random() - 0.5) * randomFactor;
+                
+                this.createCollisionEffects(wave1, wave2, collisionX, collisionY);
+                
+                this.log(`💥 Collision! Total: ${this.totalCollisions}`);
+            }
+            
+            createCollisionEffects(wave1, wave2, x, y) {
+                wave1.element.classList.add('colliding');
+                wave2.element.classList.add('colliding');
+                
+                setTimeout(() => {
+                    wave1.element.classList.remove('colliding');
+                    wave2.element.classList.remove('colliding');
+                }, 600);
+                
+                const sparkCount = 6 + Math.floor(Math.random() * 4);
+                for (let i = 0; i < sparkCount; i++) {
+                    setTimeout(() => {
+                        this.createSpark(x, y, 1.0);
+                    }, i * 30);
+                }
+            }
+            
+            createSpark(x, y, intensity = 1.0) {
+                const spark = document.createElement('div');
+                spark.className = 'collision-spark';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = (30 + Math.random() * 40) * intensity;
+                const sparkX = Math.cos(angle) * distance;
+                const sparkY = Math.sin(angle) * distance;
+                
+                spark.style.setProperty('--spark-x', sparkX + 'px');
+                spark.style.setProperty('--spark-y', sparkY + 'px');
+                
+                spark.style.left = (x - 2) + 'px';
+                spark.style.top = (y - 2) + 'px';
+                
+                document.body.appendChild(spark);
+                
+                setTimeout(() => {
+                    if (spark.parentNode) {
+                        spark.parentNode.removeChild(spark);
+                    }
+                }, 800);
+            }
+            
+            applyPhysicsToElement(wave) {
+                if (!wave.element || !wave.physics) return;
+                
+                wave.element.style.left = (wave.physics.x - wave.size / 2) + 'px';
+                wave.element.style.top = (wave.physics.y - wave.size / 2) + 'px';
+                
+                wave.x = wave.physics.x;
+                wave.y = wave.physics.y;
+            }
+            
+            addWaveToPhysics(waveData, initialVelocity = null) {
+                if (!waveData.element) return;
+                
+                const rect = waveData.element.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                waveData.physics = {
+                    x: centerX,
+                    y: centerY,
+                    velocityX: initialVelocity ? initialVelocity.x : (Math.random() - 0.5) * 2,
+                    velocityY: initialVelocity ? initialVelocity.y : (Math.random() - 0.5) * 2
+                };
+                
+                waveData.size = parseInt(waveData.element.style.width) || 80;
+                
+                this.log(`➕ Wave added to physics at (${Math.round(centerX)}, ${Math.round(centerY)})`);
+            }
+            
+            removeWaveFromPhysics(waveData) {
+                if (waveData.physics) {
+                    delete waveData.physics;
+                    this.log(`➖ Wave removed from physics`);
+                }
+            }
+            
+            applyForce(waveData, forceX, forceY) {
+                if (!waveData.physics) return;
+                
+                waveData.physics.velocityX += forceX;
+                waveData.physics.velocityY += forceY;
+                
+                this.log(`⚡ Force applied: (${forceX.toFixed(2)}, ${forceY.toFixed(2)})`);
+            }
+            
+            getStats() {
+                return {
+                    totalCollisions: this.totalCollisions,
+                    timeSinceLastCollision: Date.now() - this.lastCollisionTime,
+                    enabled: this.enabled
+                };
+            }
+        }
+
+        class WorldSpacePinchAR {
+            constructor() {
+                this.video = document.getElementById('camera-view');
+                this.detectionCanvas = document.getElementById('detection-canvas');
+                this.detectionCtx = this.detectionCanvas.getContext('2d');
+                this.arCanvas = document.getElementById('ar-canvas');
+                this.arCtx = this.arCanvas.getContext('2d');
+                this.status = document.getElementById('status');
+                this.debug = document.getElementById('debug');
+                this.loading = document.getElementById('loading');
+                this.instructions = document.getElementById('instructions');
+                this.controls = document.getElementById('controls');
+                this.physicsStats = document.getElementById('physics-stats');
+                
+                // Physics Engine
+                this.physics = new PhysicsEngine();
+                this.physicsLoop = null;
+                this.showPhysicsStats = false;
+                
+                // AI Assistant
+                this.ai = new AIAssistant(this);
+                
+                // MediaPipe Hands
+                this.hands = null;
+                this.camera = null;
+                this.handResults = null;
+                this.useSimplifiedDetection = false;
+                
+                // Hand tracking parameters
+                this.showDetection = false;
+                this.showLandmarks = true;
+                this.frameCount = 0;
+                
+                // Pinch detection
+                this.activePinches = new Map();
+                this.pinchThreshold = 0.05;
+                this.waveCounter = 0;
+                this.lastPinchStates = new Map();
+                
+                // Dribbling detection
+                this.solidWaves = [];
+                this.dribbleThreshold = 0.08;
+                this.lastDribbleStates = new Map();
+                this.dribbleDistance = 60;
+                
+                this.init();
+            }
+            
+            log(message) {
+                console.log(message);
+                this.debug.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+                this.debug.scrollTop = this.debug.scrollHeight;
+                
+                const lines = this.debug.innerHTML.split('<br>');
+                if (lines.length > 6) {
+                    this.debug.innerHTML = lines.slice(-6).join('<br>');
+                }
+            }
+            
+            async init() {
+                this.log('🚀 Initializing WebAR Wave Physics with AI...');
+                
+                this.resizeCanvases();
+                window.addEventListener('resize', () => this.resizeCanvases());
+                
+                this.startPhysicsLoop();
+                
+                await this.initializeMediaPipe();
+                await this.setupCamera();
+                
+                this.log('✅ WebAR AI system initialized!');
+            }
+            
+            startPhysicsLoop() {
+                const physicsUpdate = () => {
+                    this.solidWaves.forEach(wave => {
+                        this.physics.updateWave(wave);
+                    });
+                    
+                    this.physics.checkCollisions(this.solidWaves);
+                    
+                    if (this.showPhysicsStats) {
+                        this.updatePhysicsStatsDisplay();
+                    }
+                    
+                    this.physicsLoop = requestAnimationFrame(physicsUpdate);
+                };
+                
+                this.physicsLoop = requestAnimationFrame(physicsUpdate);
+                this.log('🔬 Physics simulation started at 60fps');
+            }
+            
+            updatePhysicsStatsDisplay() {
+                const stats = this.physics.getStats();
+                document.getElementById('collision-count').textContent = `Collisions: ${stats.totalCollisions}`;
+                document.getElementById('wave-count').textContent = `Active Waves: ${this.solidWaves.length}`;
+                
+                const timeSince = stats.timeSinceLastCollision;
+                const timeText = timeSince < 60000 ? `${Math.floor(timeSince/1000)}s ago` : 'none recent';
+                document.getElementById('velocity-info').textContent = `Last Collision: ${timeText}`;
+            }
+            
+            async initializeMediaPipe() {
+                try {
+                    this.log('🤖 Loading MediaPipe Hands...');
+                    
+                    if (typeof Hands === 'undefined') {
+                        throw new Error('MediaPipe Hands library not loaded');
+                    }
+                    
+                    this.hands = new Hands({
+                        locateFile: (file) => {
+                            return `https://unpkg.com/@mediapipe/hands@0.4.1675469240/${file}`;
+                        }
+                    });
+                    
+                    this.hands.setOptions({
+                        maxNumHands: 2,
+                        modelComplexity: 1,
+                        minDetectionConfidence: 0.7,
+                        minTrackingConfidence: 0.5
+                    });
+                    
+                    this.hands.onResults(this.onResults.bind(this));
+                    
+                    this.log('✅ MediaPipe Hands loaded!');
+                    
+                } catch (error) {
+                    this.log('⚠ MediaPipe error: ' + error.message);
+                    this.status.textContent = 'MediaPipe error: ' + error.message;
+                    
+                    this.log('⚠ Falling back to simplified hand detection...');
+                    this.useSimplifiedDetection = true;
+                }
+            }
+            
+            startMediaPipeProcessing() {
+                if (this.useSimplifiedDetection) {
+                    this.startSimplifiedDetection();
+                    return;
+                }
+                
+                const processFrame = async () => {
+                    if (this.video.readyState >= 2) {
+                        try {
+                            await this.hands.send({ image: this.video });
+                        } catch (error) {
+                            this.log('⚠ MediaPipe processing error, switching to fallback');
+                            this.useSimplifiedDetection = true;
+                            this.startSimplifiedDetection();
+                            return;
+                        }
+                    }
+                    requestAnimationFrame(processFrame);
+                };
+                
+                processFrame();
+            }
+            
+            startSimplifiedDetection() {
+                this.log('🎯 Starting simplified detection (click/tap/voice)');
+                this.status.textContent = 'MediaPipe unavailable. Use voice commands or click to create waves!';
+                
+                const createWaveAtPoint = (x, y) => {
+                    const pinchId = `click-${Date.now()}`;
+                    const wave = this.create3DWave({ x, y }, 50);
+                    wave.classList.add('solid');
+                    
+                    const waveData = {
+                        element: wave,
+                        id: pinchId,
+                        x: x,
+                        y: y,
+                        originalX: x,
+                        originalY: y
+                    };
+                    
+                    this.solidWaves.push(waveData);
+                    
+                    const initialVel = {
+                        x: (Math.random() - 0.5) * 8,
+                        y: (Math.random() - 0.5) * 8 - 2
+                    };
+                    this.physics.addWaveToPhysics(waveData, initialVel);
+                    
+                    this.waveCounter++;
+                    this.log(`✨ Physics wave created at (${Math.round(x)}, ${Math.round(y)})`);
+                };
+                
+                document.addEventListener('click', (e) => {
+                    createWaveAtPoint(e.clientX, e.clientY);
+                });
+                
+                document.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    createWaveAtPoint(touch.clientX, touch.clientY);
+                });
+            }
+            
+            resizeCanvases() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                
+                this.detectionCanvas.width = width;
+                this.detectionCanvas.height = height;
+                this.arCanvas.width = width;
+                this.arCanvas.height = height;
+                
+                this.log(`📐 Canvases resized: ${width}x${height}`);
+            }
+            
+            async setupCamera() {
+                try {
+                    this.log('📷 Setting up camera...');
+                    
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        throw new Error('getUserMedia not supported in this browser');
+                    }
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'environment',
+                            width: { ideal: 640, max: 1280 },
+                            height: { ideal: 480, max: 720 }
+                        }
+                    });
+                    
+                    this.video.srcObject = stream;
+                    
+                    await new Promise((resolve) => {
+                        this.video.onloadedmetadata = () => {
+                            this.video.play().then(resolve);
+                        };
+                    });
+                    
+                    this.startMediaPipeProcessing();
+                    
+                    this.loading.style.display = 'none';
+                    this.instructions.style.display = 'block';
+                    this.controls.style.display = 'block';
+                    
+                    this.log('✅ Camera started successfully!');
+                    this.status.textContent = 'Ready! Create waves, watch collisions, and chat with AI assistant!';
+                    
+                } catch (error) {
+                    this.log('⚠ Camera error: ' + error.message);
+                    this.status.textContent = 'Camera error: ' + error.message;
+                    this.loading.innerHTML = `
+                        <div style="color: red;">Camera Error: ${error.message}</div>
+                        <div style="margin-top: 10px; font-size: 12px;">
+                            ${error.name === 'NotAllowedError' ? 
+                                'Please allow camera access and refresh the page.' : 
+                                'Please check camera permissions and try again.'}
+                        </div>
+                        <button onclick="location.reload()" style="margin-top: 10px;">Retry</button>
+                    `;
+                }
+            }
+            
+            onResults(results) {
+                if (this.useSimplifiedDetection) return;
+                
+                this.handResults = results;
+                this.frameCount++;
+                
+                if (this.showLandmarks) {
+                    document.querySelectorAll('.hand-landmark, .fingertip, .dribble-fingertip').forEach(el => el.remove());
+                }
+                
+                this.detectionCtx.clearRect(0, 0, this.detectionCanvas.width, this.detectionCanvas.height);
+                
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    results.multiHandLandmarks.forEach((landmarks, handIndex) => {
+                        this.processHand(landmarks, handIndex, results.multiHandedness[handIndex]);
+                    });
+                } else {
+                    this.cleanupInactivePinches();
+                    this.cleanupInactiveDribbles();
+                    this.status.textContent = 'Show your hand to the camera! AI assistant ready...';
+                }
+            }
+            
+            processHand(landmarks, handIndex, handedness) {
+                const handLabel = handedness.label;
+                
+                const screenLandmarks = landmarks.map(landmark => ({
+                    x: landmark.x * this.detectionCanvas.width,
+                    y: landmark.y * this.detectionCanvas.height,
+                    z: landmark.z
+                }));
+                
+                if (this.showLandmarks) {
+                    this.drawHandLandmarks(screenLandmarks);
+                }
+                
+                const thumbTip = screenLandmarks[4];
+                const indexTip = screenLandmarks[8];
+                const middleTip = screenLandmarks[12];
+                
+                this.processPinching(thumbTip, indexTip, handIndex, handLabel);
+                this.processDribbling(indexTip, middleTip, handIndex, handLabel);
+            }
+            
+            processPinching(thumbTip, indexTip, handIndex, handLabel) {
+                const distance = Math.sqrt(
+                    Math.pow(thumbTip.x - indexTip.x, 2) + 
+                    Math.pow(thumbTip.y - indexTip.y, 2)
+                );
+                
+                const normalizedDistance = distance / Math.min(this.detectionCanvas.width, this.detectionCanvas.height);
+                
+                const pinchId = `hand-${handIndex}`;
+                const isPinching = normalizedDistance < this.pinchThreshold;
+                const wasPinching = this.lastPinchStates.get(pinchId) || false;
+                
+                this.lastPinchStates.set(pinchId, isPinching);
+                
+                if (isPinching && !wasPinching) {
+                    this.startWorldSpacePinch(thumbTip, indexTip, pinchId, handLabel);
+                } else if (isPinching && wasPinching) {
+                    this.updateWorldSpacePinch(thumbTip, indexTip, pinchId);
+                } else if (!isPinching && wasPinching) {
+                    this.endWorldSpacePinch(pinchId);
+                }
+            }
+            
+            processDribbling(indexTip, middleTip, handIndex, handLabel) {
+                const distance = Math.sqrt(
+                    Math.pow(indexTip.x - middleTip.x, 2) + 
+                    Math.pow(indexTip.y - middleTip.y, 2)
+                );
+                
+                const normalizedDistance = distance / Math.min(this.detectionCanvas.width, this.detectionCanvas.height);
+                
+                const dribbleId = `dribble-${handIndex}`;
+                const isDribbling = normalizedDistance < this.dribbleThreshold;
+                const wasDribbling = this.lastDribbleStates.get(dribbleId) || false;
+                
+                this.lastDribbleStates.set(dribbleId, isDribbling);
+                
+                if (isDribbling) {
+                    const dribblePoint = {
+                        x: (indexTip.x + middleTip.x) / 2,
+                        y: (indexTip.y + middleTip.y) / 2
+                    };
+                    
+                    this.checkDribbleInteraction(dribblePoint, handLabel, !wasDribbling);
+                    
+                    if (this.showLandmarks) {
+                        this.showDribbleFingertips(indexTip, middleTip);
+                    }
+                }
+            }
+            
+            checkDribbleInteraction(dribblePoint, handLabel, isNewDribble) {
+                this.solidWaves.forEach((waveData, index) => {
+                    const waveCenterX = waveData.physics ? waveData.physics.x : waveData.x;
+                    const waveCenterY = waveData.physics ? waveData.physics.y : waveData.y;
+                    
+                    const distanceToWave = Math.sqrt(
+                        Math.pow(dribblePoint.x - waveCenterX, 2) + 
+                        Math.pow(dribblePoint.y - waveCenterY, 2)
+                    );
+                    
+                    if (distanceToWave < this.dribbleDistance) {
+                        this.dribbleWave(waveData, dribblePoint, handLabel, isNewDribble);
+                    }
+                });
+            }
+            
+            dribbleWave(waveData, dribblePoint, handLabel, isNewDribble) {
+                if (isNewDribble) {
+                    this.log(`🤸 ${handLabel} hand dribbling physics wave at (${Math.round(dribblePoint.x)}, ${Math.round(dribblePoint.y)})`);
+                }
+                
+                waveData.element.classList.remove('bouncing');
+                waveData.element.offsetHeight;
+                waveData.element.classList.add('bouncing');
+                
+                if (waveData.physics) {
+                    const currentX = waveData.physics.x;
+                    const currentY = waveData.physics.y;
+                    
+                    const deltaX = dribblePoint.x - currentX;
+                    const deltaY = dribblePoint.y - currentY;
+                    
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const forceIntensity = 3.0;
+                    
+                    if (distance > 0) {
+                        const forceX = (deltaX / distance) * forceIntensity;
+                        const forceY = (deltaY / distance) * forceIntensity;
+                        
+                        this.physics.applyForce(waveData, forceX, forceY);
+                    }
+                    
+                    this.physics.applyForce(waveData, 0, -2);
+                }
+                
+                setTimeout(() => {
+                    waveData.element.classList.remove('bouncing');
+                }, 300);
+                
+                this.status.textContent = `Dribbling physics wave with ${handLabel} hand!`;
+            }
+            
+            showDribbleFingertips(indexTip, middleTip) {
+                const indexDot = document.createElement('div');
+                indexDot.className = 'hand-landmark dribble-fingertip';
+                indexDot.style.left = (indexTip.x - 7) + 'px';
+                indexDot.style.top = (indexTip.y - 7) + 'px';
+                document.body.appendChild(indexDot);
+                
+                const middleDot = document.createElement('div');
+                middleDot.className = 'hand-landmark dribble-fingertip';
+                middleDot.style.left = (middleTip.x - 7) + 'px';
+                middleDot.style.top = (middleTip.y - 7) + 'px';
+                document.body.appendChild(middleDot);
+            }
+            
+            drawHandLandmarks(landmarks) {
+                landmarks.forEach((landmark, index) => {
+                    const dot = document.createElement('div');
+                    dot.className = 'hand-landmark';
+                    
+                    if ([4, 8, 12, 16, 20].includes(index)) {
+                        dot.className = 'hand-landmark fingertip';
+                    }
+                    
+                    dot.style.left = (landmark.x - 6) + 'px';
+                    dot.style.top = (landmark.y - 6) + 'px';
+                    document.body.appendChild(dot);
+                });
+                
+                if (this.showDetection) {
+                    this.drawHandConnections(landmarks);
+                }
+            }
+            
+            drawHandConnections(landmarks) {
+                this.detectionCtx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+                this.detectionCtx.lineWidth = 2;
+                
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],
+                    [0, 5], [5, 6], [6, 7], [7, 8],
+                    [0, 17], [5, 9], [9, 10], [10, 11], [11, 12],
+                    [9, 13], [13, 14], [14, 15], [15, 16],
+                    [13, 17], [17, 18], [18, 19], [19, 20]
+                ];
+                
+                connections.forEach(([start, end]) => {
+                    if (landmarks[start] && landmarks[end]) {
+                        this.detectionCtx.beginPath();
+                        this.detectionCtx.moveTo(landmarks[start].x, landmarks[start].y);
+                        this.detectionCtx.lineTo(landmarks[end].x, landmarks[end].y);
+                        this.detectionCtx.stroke();
+                    }
+                });
+            }
+            
+            startWorldSpacePinch(thumbTip, indexTip, pinchId, handLabel) {
+                const midpoint = {
+                    x: (thumbTip.x + indexTip.x) / 2,
+                    y: (thumbTip.y + indexTip.y) / 2
+                };
+                
+                const distance = Math.sqrt(
+                    Math.pow(thumbTip.x - indexTip.x, 2) + 
+                    Math.pow(thumbTip.y - indexTip.y, 2)
+                );
+                
+                this.log(`🤏 ${handLabel} hand pinch started at (${Math.round(midpoint.x)}, ${Math.round(midpoint.y)})`);
+                
+                const pinchIndicator = document.createElement('div');
+                pinchIndicator.className = 'pinch-indicator';
+                pinchIndicator.style.left = (midpoint.x - 15) + 'px';
+                pinchIndicator.style.top = (midpoint.y - 15) + 'px';
+                pinchIndicator.id = 'pinch-' + pinchId;
+                document.body.appendChild(pinchIndicator);
+                
+                const wave = this.create3DWave(midpoint, distance);
+                
+                this.activePinches.set(pinchId, {
+                    wave: wave,
+                    indicator: pinchIndicator,
+                    startTime: Date.now(),
+                    lastUpdate: Date.now(),
+                    startDistance: distance
+                });
+            }
+            
+            updateWorldSpacePinch(thumbTip, indexTip, pinchId) {
+                const pinchData = this.activePinches.get(pinchId);
+                if (!pinchData) return;
+                
+                const midpoint = {
+                    x: (thumbTip.x + indexTip.x) / 2,
+                    y: (thumbTip.y + indexTip.y) / 2
+                };
+                
+                const distance = Math.sqrt(
+                    Math.pow(thumbTip.x - indexTip.x, 2) + 
+                    Math.pow(thumbTip.y - indexTip.y, 2)
+                );
+                
+                pinchData.lastUpdate = Date.now();
+                
+                pinchData.indicator.style.left = (midpoint.x - 15) + 'px';
+                pinchData.indicator.style.top = (midpoint.y - 15) + 'px';
+                
+                this.update3DWave(pinchData.wave, midpoint, distance);
+            }
+            
+            endWorldSpacePinch(pinchId) {
+                const pinchData = this.activePinches.get(pinchId);
+                if (!pinchData) return;
+                
+                const duration = Date.now() - pinchData.startTime;
+                this.log(`✨ Pinch ended after ${duration}ms - creating physics wave`);
+                
+                if (pinchData.indicator && pinchData.indicator.parentNode) {
+                    pinchData.indicator.parentNode.removeChild(pinchData.indicator);
+                }
+                
+                pinchData.wave.classList.add('solid');
+                
+                const waveRect = pinchData.wave.getBoundingClientRect();
+                const centerX = waveRect.left + waveRect.width / 2;
+                const centerY = waveRect.top + waveRect.height / 2;
+                
+                const waveData = {
+                    element: pinchData.wave,
+                    id: pinchId,
+                    x: centerX,
+                    y: centerY,
+                    originalX: centerX,
+                    originalY: centerY
+                };
+                
+                this.solidWaves.push(waveData);
+                
+                const pinchVelocity = {
+                    x: (Math.random() - 0.5) * 3,
+                    y: (Math.random() - 0.5) * 3 - 1
+                };
+                this.physics.addWaveToPhysics(waveData, pinchVelocity);
+                
+                this.activePinches.delete(pinchId);
+                
+                setTimeout(() => {
+                    if (pinchData.wave && pinchData.wave.parentNode) {
+                        pinchData.wave.style.transition = 'opacity 3s';
+                        pinchData.wave.style.opacity = '0';
+                        setTimeout(() => {
+                            if (pinchData.wave.parentNode) {
+                                pinchData.wave.parentNode.removeChild(pinchData.wave);
+                            }
+                            this.solidWaves = this.solidWaves.filter(w => w.id !== pinchId);
+                        }, 3000);
+                    }
+                }, 90000);
+            }
+            
+            create3DWave(position, pinchDistance) {
+                const wave = document.createElement('div');
+                wave.className = 'wave-3d';
+                wave.id = 'wave-3d-' + this.waveCounter++;
+                
+                const depthFactor = Math.max(0.5, Math.min(2.0, (100 - pinchDistance) / 50));
+                const size = 60 + (depthFactor * 40);
+                
+                wave.style.width = size + 'px';
+                wave.style.height = size + 'px';
+                wave.style.left = (position.x - size/2) + 'px';
+                wave.style.top = (position.y - size/2) + 'px';
+                
+                wave.style.filter = `blur(${(2 - depthFactor)}px)`;
+                wave.style.transform = `scale(${depthFactor})`;
+                
+                document.body.appendChild(wave);
+                
+                return wave;
+            }
+            
+            update3DWave(wave, position, pinchDistance) {
+                const depthFactor = Math.max(0.5, Math.min(2.0, (100 - pinchDistance) / 50));
+                const size = 60 + (depthFactor * 40);
+                
+                wave.style.width = size + 'px';
+                wave.style.height = size + 'px';
+                wave.style.left = (position.x - size/2) + 'px';
+                wave.style.top = (position.y - size/2) + 'px';
+                wave.style.filter = `blur(${(2 - depthFactor)}px)`;
+                wave.style.transform = `scale(${depthFactor})`;
+                
+                if (pinchDistance < 30) {
+                    wave.style.animationDuration = '1.5s';
+                } else if (pinchDistance < 50) {
+                    wave.style.animationDuration = '2s';
+                } else {
+                    wave.style.animationDuration = '3s';
+                }
+            }
+            
+            cleanupInactivePinches() {
+                this.activePinches.forEach((pinchData, pinchId) => {
+                    this.endWorldSpacePinch(pinchId);
+                });
+                this.lastPinchStates.clear();
+            }
+            
+            cleanupInactiveDribbles() {
+                this.lastDribbleStates.clear();
+            }
+            
+            // Control methods
+            toggleDetectionView() {
+                this.showDetection = !this.showDetection;
+                this.log(`🔍 Detection view: ${this.showDetection ? 'ON' : 'OFF'}`);
+            }
+            
+            toggleHandLandmarks() {
+                this.showLandmarks = !this.showLandmarks;
+                if (!this.showLandmarks) {
+                    document.querySelectorAll('.hand-landmark, .fingertip, .dribble-fingertip').forEach(el => el.remove());
+                }
+                this.log(`👋 Hand landmarks: ${this.showLandmarks ? 'ON' : 'OFF'}`);
+            }
+            
+            togglePhysicsStats() {
+                this.showPhysicsStats = !this.showPhysicsStats;
+                this.physicsStats.style.display = this.showPhysicsStats ? 'block' : 'none';
+                this.log(`📊 Physics stats: ${this.showPhysicsStats ? 'ON' : 'OFF'}`);
+            }
+            
+            spawnTestWaves() {
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i / 5) * Math.PI * 2;
+                    const radius = 100;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    const wave = this.create3DWave({ x, y }, 50);
+                    wave.classList.add('solid');
+                    
+                    const waveData = {
+                        element: wave,
+                        id: `test-${Date.now()}-${i}`,
+                        x: x,
+                        y: y,
+                        originalX: x,
+                        originalY: y
+                    };
+                    
+                    this.solidWaves.push(waveData);
+                    
+                    const velX = (centerX - x) * 0.02 + (Math.random() - 0.5) * 4;
+                    const velY = (centerY - y) * 0.02 + (Math.random() - 0.5) * 4;
+                    
+                    this.physics.addWaveToPhysics(waveData, { x: velX, y: velY });
+                }
+                
+                this.log(`🎯 Spawned 5 test waves for collision testing`);
+            }
+            
+            clearAllWaves() {
+                document.querySelectorAll('.wave-3d').forEach(wave => {
+                    wave.parentNode.removeChild(wave);
+                });
+                
+                this.solidWaves.forEach(waveData => {
+                    this.physics.removeWaveFromPhysics(waveData);
+                });
+                
+                this.activePinches.clear();
+                this.solidWaves = [];
+                
+                this.log('🧹 All waves and physics data cleared');
+            }
+
+            createWaveAtCenter() {
+                const x = this.arCanvas.width / 2;
+                const y = this.arCanvas.height / 2;
+                const pinchId = `voice-${Date.now()}`;
+                const wave = this.create3DWave({ x, y }, 50);
+                wave.classList.add('solid');
+                
+                const waveData = {
+                    element: wave,
+                    id: pinchId,
+                    x: x,
+                    y: y,
+                    originalX: x,
+                    originalY: y
+                };
+                
+                this.solidWaves.push(waveData);
+                
+                const initialVel = {
+                    x: (Math.random() - 0.5) * 6,
+                    y: (Math.random() - 0.5) * 6 - 2
+                };
+                this.physics.addWaveToPhysics(waveData, initialVel);
+                
+                this.waveCounter++;
+                this.log(`✨ Physics wave created by voice at (${Math.round(x)}, ${Math.round(y)})`);
+            }
+        }
+        
+        // Initialize the app
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new WorldSpacePinchAR();
+        });
+        
+        // Prevent zoom and scrolling
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('gesturestart', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
