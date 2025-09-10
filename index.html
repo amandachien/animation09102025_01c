@@ -799,6 +799,7 @@
 
     <script>
 // Enhanced AI Assistant Class with Secure HuggingFace Integration
+    // Enhanced AI Assistant Class with Secure HuggingFace Integration
 class AIAssistant {
     constructor(app) {
         this.app = app;
@@ -902,7 +903,6 @@ class AIAssistant {
         // Update conversationDiv reference
         this.conversationDiv = document.getElementById('ai-conversation');
     }
-}
     
     handleQuickCommand(command) {
         const commandTexts = {
@@ -940,7 +940,7 @@ class AIAssistant {
             // If not a direct command, process with AI
             this.processCommand(text);
         }
-    }
+    }   
     
     handleTextInput() {
         const input = document.getElementById('ai-text-input');
@@ -1326,6 +1326,7 @@ class AIAssistant {
         this.conversation = [];
         this.addMessage('ai', 'Conversation cleared! How can I help you with the wave physics simulation?');
     }
+}
 
 class PhysicsEngine {
     constructor() {
