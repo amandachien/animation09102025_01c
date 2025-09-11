@@ -1520,14 +1520,12 @@ class WorldSpacePinchAR {
         this.detectionCtx = this.detectionCanvas.getContext('2d');
         this.arCanvas = document.getElementById('ar-canvas');
         this.arCtx = this.arCanvas.getContext('2d');
+        this.status = document.getElementById('status');
         this.debug = document.getElementById('debug');
         this.loading = document.getElementById('loading');
         this.instructions = document.getElementById('instructions');
+        this.controls = document.getElementById('controls');
         this.physicsStats = document.getElementById('physics-stats');
-        
-        // Updated status reference to new tab structure
-        this.statusContent = document.getElementById('status-content');
-        this.bottomTabs = document.getElementById('bottom-tabs');
         
         // Physics Engine
         this.physics = new PhysicsEngine();
@@ -1572,12 +1570,6 @@ class WorldSpacePinchAR {
         if (lines.length > 6) {
             this.debug.innerHTML = lines.slice(-6).join('<br>');
         }
-    }
-    
-    // Updated status method to use new tab structure
-    setStatus(message) {
-        this.statusContent.textContent = message;
-        this.log('Status: ' + message);
     }
     
     async init() {
@@ -1650,7 +1642,7 @@ class WorldSpacePinchAR {
             
         } catch (error) {
             this.log('MediaPipe error: ' + error.message);
-            this.setStatus('MediaPipe error: ' + error.message);
+            this.status.textContent = 'MediaPipe error: ' + error.message;
             
             this.log('Falling back to simplified hand detection...');
             this.useSimplifiedDetection = true;
@@ -1682,7 +1674,7 @@ class WorldSpacePinchAR {
     
     startSimplifiedDetection() {
         this.log('Starting simplified detection (click/tap/voice)');
-        this.setStatus('MediaPipe unavailable. Use voice commands or click to create waves!');
+        this.status.textContent = 'MediaPipe unavailable. Use voice commands or click to create waves!';
         
         const createWaveAtPoint = (x, y) => {
             const pinchId = `click-${Date.now()}`;
@@ -1761,14 +1753,14 @@ class WorldSpacePinchAR {
             
             this.loading.style.display = 'none';
             this.instructions.style.display = 'block';
-            this.bottomTabs.style.display = 'block';
+            this.controls.style.display = 'block';
             
             this.log('Camera started successfully!');
-            this.setStatus('Ready! Create waves, watch collisions, and chat with AI assistant!');
+            this.status.textContent = 'Ready! Create waves, watch collisions, and chat with AI assistant!';
             
         } catch (error) {
             this.log('Camera error: ' + error.message);
-            this.setStatus('Camera error: ' + error.message);
+            this.status.textContent = 'Camera error: ' + error.message;
             this.loading.innerHTML = `
                 <div style="color: #d32f2f;">Camera Error: ${error.message}</div>
                 <div style="margin-top: 10px; font-size: 12px;">
@@ -1801,7 +1793,7 @@ class WorldSpacePinchAR {
         } else {
             this.cleanupInactivePinches();
             this.cleanupInactiveDribbles();
-            this.setStatus('Show your hand to the camera! AI assistant ready...');
+            this.status.textContent = 'Show your hand to the camera! AI assistant ready...';
         }
     }
     
@@ -1926,7 +1918,7 @@ class WorldSpacePinchAR {
             waveData.element.classList.remove('bouncing');
         }, 300);
         
-        this.setStatus(`Dribbling physics wave with ${handLabel} hand!`);
+        this.status.textContent = `Dribbling physics wave with ${handLabel} hand!`;
     }
     
     showDribbleFingertips(indexTip, middleTip) {
