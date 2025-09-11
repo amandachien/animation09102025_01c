@@ -110,6 +110,22 @@
             backdrop-filter: blur(10px);
         }
         
+        #status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: var(--md-dark-surface-variant);
+            color: var(--md-dark-on-surface);
+            padding: 16px;
+            border-radius: 12px;
+            z-index: 100;
+            text-align: center;
+            font-size: 12px;
+            box-shadow: 0 2px 8px var(--md-shadow);
+            border: 1px solid var(--md-dark-outline);
+        }
+        
         #debug {
             position: fixed;
             top: 140px;
@@ -129,85 +145,19 @@
             backdrop-filter: blur(10px);
         }
         
-        /* Material Design 3 Bottom Tab Bar */
-        .bottom-tab-container {
+        #controls {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 150;
-            background: var(--md-dark-surface-variant);
-            border-top: 1px solid var(--md-dark-outline);
+            bottom: 100px;
+            left: 20px;
+            right: 20px;
+            
+            padding: 16px;
+            border-radius: 16px;
+            z-index: 100;
+            text-align: center;
+            box-shadow: 0 4px 12px var(--md-shadow);
+            border: 1px solid var(--md-dark-outline);
             backdrop-filter: blur(10px);
-            box-shadow: 0 -4px 12px var(--md-shadow);
-        }
-
-        .tab-content {
-            display: none;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--md-dark-outline);
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .tab-navigation {
-            display: flex;
-            background: var(--md-dark-surface);
-            border-radius: 16px 16px 0 0;
-        }
-
-        .tab-button {
-            flex: 1;
-            background: transparent;
-            border: none;
-            padding: 12px 8px;
-            color: var(--md-on-surface-variant);
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            min-height: 56px;
-            position: relative;
-        }
-
-        .tab-button.active {
-            color: var(--md-primary);
-            background: var(--md-primary-container);
-        }
-
-        .tab-button:not(.active):hover {
-            background: var(--md-surface-container-high);
-            color: var(--md-dark-on-surface);
-        }
-
-        .tab-button .material-icons-round {
-            font-size: 20px;
-        }
-
-        /* Status Tab Content */
-        #status-content {
-            text-align: center;
-            font-size: 12px;
-            color: var(--md-dark-on-surface);
-            min-height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Controls Tab Content */
-        #controls-content {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
-            text-align: center;
         }
         
         /* Material Design 3 Buttons */
@@ -215,18 +165,18 @@
             background: var(--md-surface-container);
             color: var(--md-on-surface);
             border: 1px solid var(--md-outline-variant);
-            padding: 12px 8px;
-            border-radius: 16px;
-            font-size: 10px;
+            padding: 20px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 4px;
             font-family: 'Space Mono', monospace;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-            min-height: 56px;
-            display: flex;
-            flex-direction: column;
+            min-height: 40px;
+            display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 8px;
             box-shadow: 0 1px 3px var(--md-shadow);
         }
         
@@ -370,22 +320,6 @@
                 height: 160px;
                 max-height: 180px;
                 padding: 12px;
-            }
-
-            #controls-content {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
-            }
-
-            button {
-                font-size: 9px;
-                padding: 8px 4px;
-                min-height: 48px;
-            }
-
-            .tab-button {
-                font-size: 10px;
-                min-height: 48px;
             }
         }
 
@@ -748,6 +682,8 @@
         Watch waves collide & bounce
     </div>
     
+    <div id="status">Initializing AI assistant...</div>
+    
     <div id="debug">Debug info will appear here...</div>
 
     <div id="physics-stats" style="display: none;">
@@ -774,8 +710,128 @@
         <div id="quick-commands">
             <div style="font-size: 12px; color: var(--md-on-surface-variant); margin-bottom: 12px; font-weight: 500;">Quick Commands:</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                
-                
+                <button onclick="app.ai.handleQuickCommand('create_wave')" class="quick-cmd">
+                    <span class="material-icons-round" style="font-size: 16px;">add_circle</span>
+                    Create
+                </button>
+                <button onclick="app.ai.handleQuickCommand('spawn_test')" class="quick-cmd">
+                    <span class="material-icons-round" style="font-size: 16px;">play_arrow</span>
+                    Test
+                </button>
+                <button onclick="app.ai.handleQuickCommand('clear_waves')" class="quick-cmd">
+                    <span class="material-icons-round" style="font-size: 16px;">clear_all</span>
+                    Clear
+                </button>
+                <button onclick="app.ai.handleQuickCommand('show_physics')" class="quick-cmd">
+                    <span class="material-icons-round" style="font-size: 16px;">analytics</span>
+                    Stats
+                </button>
+                <button onclick="app.ai.handleQuickCommand('explain_physics')" class="quick-cmd">
+                    <span class="material-icons-round" style="font-size: 16px;">help</span>
+                    How It Works
+                </button>
+                <button onclick="app.ai.handleQuickCommand('capabilities')" class="quick-cmd">
+                    <span class="material-icons-round" style="font-size: 16px;">info</span>
+                    What You Do
+                </button>
+            </div>
+        </div>
+        
+        <div id="text-input-area">
+            <input type="text" id="ai-text-input" placeholder="Ask me about physics!" 
+                   onkeypress="if(event.key==='Enter') app.ai.handleTextInput()">
+            <button onclick="app.ai.handleTextInput()" style="margin-top: 12px; width: 100%; padding: 14px; 
+                    background: var(--md-primary); color: var(--md-on-primary); border: none; border-radius: 12px; font-weight: 600;
+                    display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span class="material-icons-round">send</span>
+                Send Message
+            </button>
+        </div>
+        
+        <div class="ai-controls">
+            <button onclick="app.ai.clearConversation()" style="background: var(--md-surface-container-high); color: var(--md-on-surface); 
+                    display: inline-flex; align-items: center; gap: 8px;">
+                <span class="material-icons-round" style="font-size: 16px;">delete</span>
+                Clear Chat
+            </button>
+            <button onclick="app.ai.toggleInterface()" style="background: var(--md-surface-container); color: var(--md-on-surface);
+                    display: inline-flex; align-items: center; gap: 8px;">
+                <span class="material-icons-round" style="font-size: 16px;">close</span>
+                Close
+            </button>
+        </div>
+    </div>
+    
+    <div id="controls" style="display: none;">
+        <button onclick="app.toggleDetectionView()" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span class="material-icons-round" style="font-size: 16px;">visibility</span>
+        </button>
+        <button onclick="app.clearAllWaves()" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span class="material-icons-round" style="font-size: 16px;">clear_all</span>
+        </button>
+        <button onclick="app.toggleHandLandmarks()" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span class="material-icons-round" style="font-size: 16px;">pan_tool</span>
+        </button>
+        <button onclick="app.togglePhysicsStats()" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span class="material-icons-round" style="font-size: 16px;">analytics</span>
+        </button>
+        <button onclick="app.ai.toggleInterface()" class="ai-button" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span class="material-icons-round" style="font-size: 16px;">smart_toy</span>
+        </button>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+    
+    <script src="https://unpkg.com/@mediapipe/camera_utils@0.3.1675465747/camera_utils.js"></script>
+    <script src="https://unpkg.com/@mediapipe/control_utils@0.6.1629159505/control_utils.js"></script>
+    <script src="https://unpkg.com/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js"></script>
+    <script src="https://unpkg.com/@mediapipe/hands@0.4.1675469240/hands.js"></script>
+
+    <script>
+// Enhanced AI Assistant Class with Secure HuggingFace Integration
+    // Enhanced AI Assistant Class with Secure HuggingFace Integration
+class AIAssistant {
+    constructor(app) {
+        this.app = app;
+        this.conversation = [];
+        this.speechSynthesis = window.speechSynthesis;
+        this.interface = document.getElementById('ai-interface');
+        this.conversationDiv = document.getElementById('ai-conversation');
+        this.voiceStatus = document.getElementById('voice-status');
+        
+        // Secure HuggingFace configuration
+        this.hfApiUrl = 'https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium';
+        this.hfApiKey = null;
+        this.isDemo = false;
+        
+        this.init();
+    }
+    
+    async init() {
+        this.app.log('Initializing AI Assistant...');
+        
+        // Create enhanced UI
+        this.createEnhancedInterface();
+        
+        this.app.log('AI Assistant ready!');
+    }
+    
+    createEnhancedInterface() {
+        // Update the AI interface HTML
+        this.interface.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+                    <span class="material-icons-round" style="color: var(--md-primary); font-size: 28px;">smart_toy</span>
+                    <h3 style="color: var(--md-primary); margin: 0; font-weight: 600;">AI Physics Assistant</h3>
+                </div>
+            </div>
+            
+            <div id="ai-conversation"></div>
+            
+            <div id="quick-commands" style="margin: 5px 0;">
+                <div style="font-size: 12px; color: var(--md-on-surface-variant); margin-bottom: 10px; font-weight: 500;">Quick Commands:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button onclick="app.ai.handleQuickCommand('create_wave')" class="quick-cmd">
                         <span class="material-icons-round" style="font-size: 16px;">add_circle</span>
                         Create
