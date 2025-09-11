@@ -1,6 +1,6 @@
 # WebAR Wave Physics + AI Assistant
 
-A real-time WebAR application that combines hand gesture recognition, realistic physics simulation, and AI-powered voice interaction. Create and manipulate 3D waves through hand gestures while chatting with an intelligent physics assistant.
+A real-time WebAR application that combines hand gesture recognition, realistic physics simulation, and AI-powered voice interaction. Create and manipulate 3D waves through hand gestures while messaging with an intelligent physics assistant.
 
 ## Features
 
