@@ -99,14 +99,14 @@ npm run serve
 
 ### AI Assistant
 
-**Voice Commands**
+**Message Commands**
 - "Create a wave"
 - "Clear all waves" 
 - "How do collisions work?"
 - "Show physics statistics"
 - "Spawn test waves"
 
-**Quick Command Buttons**
+**Quick Commands**
 - **Create**: Add a new wave at screen center
 - **Test**: Spawn 5 waves for collision testing
 - **Clear**: Remove all waves from simulation
