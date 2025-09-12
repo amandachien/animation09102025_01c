@@ -227,6 +227,7 @@ netlify logs:functions --name=ai-proxy
 - MediaPipe may have loading delays on slow connections
 - Hand tracking accuracy varies with lighting conditions
 - Speech synthesis voice availability depends on device/browser
+- Responsive design: Not yet
 
 ## License
 
