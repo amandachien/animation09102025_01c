@@ -458,7 +458,7 @@
             background: #f3e5f5;
         }
         
-        /* Updated 3D waves with lime green and purple colors */
+        /* Enhanced wave animations with better physics feedback */
         .wave-3d {
             position: absolute;
             border-radius: 50%;
@@ -502,45 +502,70 @@
         .wave-3d.bouncing {
             animation: bouncingWave 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             filter: blur(0.2px) contrast(1.4) brightness(1.3) saturate(1.5);
+            box-shadow: 
+                0 0 60px rgba(173, 255, 47, 1),
+                0 0 120px rgba(173, 255, 47, 0.8),
+                0 0 180px rgba(173, 255, 47, 0.6),
+                inset 0 0 50px rgba(255, 255, 255, 0.6);
         }
         
         .wave-3d.colliding {
             animation: collisionRipple 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             filter: blur(0.1px) contrast(1.5) brightness(1.4) saturate(1.8);
+            box-shadow: 
+                0 0 80px rgba(255, 255, 0, 1),
+                0 0 160px rgba(107, 70, 193, 0.9),
+                0 0 240px rgba(107, 70, 193, 0.7),
+                inset 0 0 60px rgba(255, 255, 255, 0.8);
         }
         
         .collision-spark {
             position: absolute;
             width: 4px;
             height: 4px;
-            background: radial-gradient(circle, rgba(173, 255, 47, 1) 0%, rgba(107, 70, 193, 0.8) 50%, transparent 100%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 0, 0.8) 50%, transparent 100%);
             border-radius: 50%;
             pointer-events: none;
             z-index: 5;
             animation: sparkFly 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
         
-        /* Material Design motion curves for animations */
+        /* Enhanced physics animations from green version */
         @keyframes liquidFlow3D {
             0% { 
                 transform: scale(1) rotate(0deg) skew(0deg, 0deg); 
                 border-radius: 50% 40% 60% 30%; 
                 opacity: 0.8;
             }
-            25% { 
-                transform: scale(1.2) rotate(90deg) skew(-1deg, 3deg); 
+            15% { 
+                transform: scale(1.2) rotate(45deg) skew(2deg, -1deg); 
+                border-radius: 40% 60% 30% 70%; 
+                opacity: 0.9;
+            }
+            30% { 
+                transform: scale(1.4) rotate(90deg) skew(-1deg, 3deg); 
                 border-radius: 60% 30% 70% 40%; 
                 opacity: 1;
             }
-            50% { 
+            45% { 
+                transform: scale(1.1) rotate(135deg) skew(1.5deg, -2deg); 
+                border-radius: 30% 70% 40% 60%; 
+                opacity: 0.95;
+            }
+            60% { 
                 transform: scale(1.3) rotate(180deg) skew(-2deg, 1deg); 
                 border-radius: 70% 40% 50% 30%; 
                 opacity: 1;
             }
             75% { 
-                transform: scale(1.1) rotate(270deg) skew(1deg, -1.5deg); 
+                transform: scale(1.5) rotate(225deg) skew(1deg, -1.5deg); 
                 border-radius: 40% 50% 70% 30%; 
                 opacity: 0.9;
+            }
+            90% { 
+                transform: scale(1.1) rotate(315deg) skew(-1deg, 2deg); 
+                border-radius: 50% 30% 40% 70%; 
+                opacity: 0.85;
             }
             100% { 
                 transform: scale(1) rotate(360deg) skew(0deg, 0deg); 
@@ -551,32 +576,91 @@
         
         @keyframes solidLiquidPulse {
             0%, 100% { 
-                transform: scale(1) rotate(0deg); 
+                transform: scale(1) rotate(0deg) skew(0deg, 0deg); 
                 border-radius: 45% 55% 40% 60%;
                 opacity: 0.9; 
             }
+            25% { 
+                transform: scale(1.08) rotate(90deg) skew(1deg, -1deg); 
+                border-radius: 55% 35% 65% 45%;
+                opacity: 1; 
+            }
             50% { 
-                transform: scale(1.08) rotate(180deg); 
+                transform: scale(1.05) rotate(180deg) skew(-0.5deg, 1.5deg); 
                 border-radius: 35% 65% 45% 55%;
+                opacity: 0.95; 
+            }
+            75% { 
+                transform: scale(1.12) rotate(270deg) skew(1.5deg, -0.5deg); 
+                border-radius: 65% 45% 35% 55%;
                 opacity: 1; 
             }
         }
         
         @keyframes bouncingWave {
-            0% { transform: scale(1) translateY(0px); }
-            50% { transform: scale(1.15) translateY(-20px); }
-            100% { transform: scale(1) translateY(0px); }
+            0% {
+                transform: scale(1) translateY(0px);
+            }
+            30% {
+                transform: scale(1.15) translateY(-20px);
+                border-radius: 35% 65% 45% 55%;
+            }
+            60% {
+                transform: scale(0.9) translateY(10px);
+                border-radius: 65% 35% 55% 45%;
+            }
+            100% {
+                transform: scale(1) translateY(0px);
+                border-radius: 45% 55% 40% 60%;
+            }
         }
         
         @keyframes collisionRipple {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.3); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 0.9; }
+            0% {
+                transform: scale(1) rotate(0deg);
+                border-radius: 50% 40% 60% 30%;
+                opacity: 1;
+            }
+            20% {
+                transform: scale(1.3) rotate(72deg);
+                border-radius: 30% 70% 20% 80%;
+                opacity: 1;
+            }
+            40% {
+                transform: scale(0.8) rotate(144deg);
+                border-radius: 80% 20% 70% 30%;
+                opacity: 0.9;
+            }
+            60% {
+                transform: scale(1.2) rotate(216deg);
+                border-radius: 40% 60% 50% 50%;
+                opacity: 0.8;
+            }
+            80% {
+                transform: scale(0.9) rotate(288deg);
+                border-radius: 60% 40% 30% 70%;
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1) rotate(360deg);
+                border-radius: 50% 40% 60% 30%;
+                opacity: 0.9;
+            }
         }
         
         @keyframes sparkFly {
-            0% { transform: scale(1) translate(0, 0); opacity: 1; }
-            100% { transform: scale(0.2) translate(var(--spark-x), var(--spark-y)); opacity: 0; }
+            0% {
+                transform: scale(1) translate(0, 0);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5) translate(var(--spark-x), var(--spark-y));
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0.2) translate(calc(var(--spark-x) * 2), calc(var(--spark-y) * 2));
+                opacity: 0;
+            }
         }
         
         /* Updated Material Design landmarks with new colors */
